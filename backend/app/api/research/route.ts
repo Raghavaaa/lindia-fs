@@ -108,8 +108,20 @@ export async function POST(req: NextRequest) {
     }
     finalText = finalText.replace(/\n{3,}/g, "\n\n").trim();
 
+    // If no AI response, provide a fallback message
+    if (!finalText) {
+      finalText = "AI research services are not configured. Please add HF_TOKEN and DEEPSEEK_API_KEY environment variables to enable AI-powered legal research.";
+    }
+
     const id = `rq_${Math.random().toString(36).slice(2, 10)}`;
-    await saveResearchQuery({ id, userId, queryText: rawQuery, responseText: finalText });
+    
+    // Try to save to database, but don't fail if database is not available
+    try {
+      await saveResearchQuery({ id, userId, queryText: rawQuery, responseText: finalText });
+    } catch (dbError) {
+      console.warn("Database save failed:", dbError);
+      // Continue without saving to database
+    }
 
     return new Response(JSON.stringify({ result: finalText, id }), { status: 200, headers: { "Content-Type": "application/json" } });
   } catch (error) {
